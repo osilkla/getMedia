@@ -16,6 +16,9 @@
       margin-right: 10px;
       margin-top: 10px;
     }
+    .error {
+      color: red;
+    }
   </style>
 </head>
 <body>
@@ -30,6 +33,7 @@
     <button id="mic-btn">Request Microphone</button>
     <button id="audio-btn">Request Audio Output</button>
   </div>
+  <div id="error-message" class="error"></div>
 
   <script>
     async function updatePermissions() {
@@ -42,10 +46,7 @@
         document.getElementById('camera-permission').textContent = cameraPermission.state;
         document.getElementById('mic-permission').textContent = micPermission.state;
 
-        // Audio output state cannot be queried directly
-        document.getElementById('audio-permission').textContent = "Unavailable (use microphone access instead)";
-
-        // Handle permission state changes
+        // Handle permission state changes dynamically
         cameraPermission.onchange = () => {
           document.getElementById('camera-permission').textContent = cameraPermission.state;
         };
@@ -59,15 +60,30 @@
 
     // Request media access
     async function requestMedia(constraints) {
+      const errorMessageElement = document.getElementById('error-message');
+      errorMessageElement.textContent = ''; // Clear previous error messages
+
       try {
         const stream = await navigator.mediaDevices.getUserMedia(constraints);
         console.log('Media access granted:', constraints);
+
         // Stop the stream to release resources
         stream.getTracks().forEach(track => track.stop());
+
         // Refresh permissions after access
         updatePermissions();
       } catch (err) {
         console.error('Media access denied or error:', err);
+
+        // Handle specific errors
+        if (err.name === 'NotAllowedError') {
+          errorMessageElement.textContent = 'Access denied: You blocked the media access request.';
+        } else if (err.name === 'NotFoundError') {
+          errorMessageElement.textContent = 'No suitable media device found.';
+        } else {
+          errorMessageElement.textContent = `Unexpected error: ${err.message}`;
+        }
+
         // Refresh permissions in case the state has changed
         updatePermissions();
       }
