@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Media Permissions</title>
+  <title>Media Permissions POC</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -23,7 +23,7 @@
   <div class="permissions">
     <p><strong>Camera Permission:</strong> <span id="camera-permission">Loading...</span></p>
     <p><strong>Microphone Permission:</strong> <span id="mic-permission">Loading...</span></p>
-    <p><strong>Audio Output Permission:</strong> <span id="audio-permission">Loading...</span></p>
+    <p><strong>Audio Output Permission:</strong> <span id="audio-permission">Unavailable (cannot query directly)</span></p>
   </div>
   <div>
     <button id="camera-btn">Request Camera</button>
@@ -34,24 +34,23 @@
   <script>
     async function updatePermissions() {
       try {
+        // Query permissions for camera and microphone
         const cameraPermission = await navigator.permissions.query({ name: 'camera' });
         const micPermission = await navigator.permissions.query({ name: 'microphone' });
-        const audioPermission = await navigator.permissions.query({ name: 'audio' });
 
-        // Display the initial permission states
+        // Update the displayed permission states
         document.getElementById('camera-permission').textContent = cameraPermission.state;
         document.getElementById('mic-permission').textContent = micPermission.state;
-        document.getElementById('audio-permission').textContent = audioPermission.state;
 
-        // Update dynamically when permissions change
+        // Audio output state cannot be queried directly
+        document.getElementById('audio-permission').textContent = "Unavailable (use microphone access instead)";
+
+        // Handle permission state changes
         cameraPermission.onchange = () => {
           document.getElementById('camera-permission').textContent = cameraPermission.state;
         };
         micPermission.onchange = () => {
           document.getElementById('mic-permission').textContent = micPermission.state;
-        };
-        audioPermission.onchange = () => {
-          document.getElementById('audio-permission').textContent = audioPermission.state;
         };
       } catch (err) {
         console.error('Error fetching permissions:', err);
@@ -82,7 +81,8 @@
       requestMedia({ audio: true });
     });
     document.getElementById('audio-btn').addEventListener('click', () => {
-      requestMedia({ audio: true }); // Audio output requires the same permission as the microphone
+      // Simulate audio output request (maps to microphone access for this demo)
+      requestMedia({ audio: true });
     });
 
     // Initialize permission states
