@@ -26,27 +26,23 @@
   <div class="permissions">
     <p><strong>Camera Permission:</strong> <span id="camera-permission">Loading...</span></p>
     <p><strong>Microphone Permission:</strong> <span id="mic-permission">Loading...</span></p>
-    <p><strong>Audio Output Permission:</strong> <span id="audio-permission">Unavailable (cannot query directly)</span></p>
+    <p><strong>Audio Output Devices:</strong> <span id="audio-devices">Checking...</span></p>
   </div>
   <div>
     <button id="camera-btn">Request Camera</button>
     <button id="mic-btn">Request Microphone</button>
-    <button id="audio-btn">Request Audio Output</button>
   </div>
   <div id="error-message" class="error"></div>
 
   <script>
     async function updatePermissions() {
       try {
-        // Query permissions for camera and microphone
         const cameraPermission = await navigator.permissions.query({ name: 'camera' });
         const micPermission = await navigator.permissions.query({ name: 'microphone' });
 
-        // Update the displayed permission states
         document.getElementById('camera-permission').textContent = cameraPermission.state;
         document.getElementById('mic-permission').textContent = micPermission.state;
 
-        // Handle permission state changes dynamically
         cameraPermission.onchange = () => {
           document.getElementById('camera-permission').textContent = cameraPermission.state;
         };
@@ -58,24 +54,53 @@
       }
     }
 
-    // Request media access
+    async function getAudioOutputDevices() {
+      const audioDevicesElement = document.getElementById('audio-devices');
+      audioDevicesElement.textContent = 'Checking...';
+
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const audioOutputDevices = devices.filter(device => device.kind === 'audiooutput');
+
+        if (audioOutputDevices.length > 0) {
+          const list = audioOutputDevices.map(device => `${device.label || 'Unnamed Device'} (ID: ${device.deviceId})`);
+          audioDevicesElement.textContent = list.join(', ');
+        } else {
+          audioDevicesElement.textContent = 'No audio output devices found.';
+        }
+      } catch (err) {
+        console.error('Error fetching audio devices:', err);
+        audioDevicesElement.textContent = 'Error checking audio output devices.';
+      }
+    }
+
+    function setAudioOutputDevice(deviceId) {
+      const audioTags = document.getElementsByTagName('audio');
+      Array.from(audioTags).forEach(tag => {
+        if (typeof tag.setSinkId === 'function') {
+          tag.setSinkId(deviceId)
+            .then(() => console.log(`Audio output set to device ID: ${deviceId}`))
+            .catch(err => console.error(`Error setting audio output device: ${err.message}`));
+        } else {
+          console.warn('setSinkId is not supported in this browser.');
+        }
+      });
+    }
+
     async function requestMedia(constraints) {
       const errorMessageElement = document.getElementById('error-message');
-      errorMessageElement.textContent = ''; // Clear previous error messages
+      errorMessageElement.textContent = '';
 
       try {
         const stream = await navigator.mediaDevices.getUserMedia(constraints);
         console.log('Media access granted:', constraints);
 
-        // Stop the stream to release resources
         stream.getTracks().forEach(track => track.stop());
 
-        // Refresh permissions after access
         updatePermissions();
       } catch (err) {
         console.error('Media access denied or error:', err);
 
-        // Handle specific errors
         if (err.name === 'NotAllowedError') {
           errorMessageElement.textContent = 'Access denied: You blocked the media access request.';
         } else if (err.name === 'NotFoundError') {
@@ -84,25 +109,20 @@
           errorMessageElement.textContent = `Unexpected error: ${err.message}`;
         }
 
-        // Refresh permissions in case the state has changed
         updatePermissions();
       }
     }
 
-    // Add event listeners to buttons
     document.getElementById('camera-btn').addEventListener('click', () => {
       requestMedia({ video: true });
     });
+
     document.getElementById('mic-btn').addEventListener('click', () => {
       requestMedia({ audio: true });
     });
-    document.getElementById('audio-btn').addEventListener('click', () => {
-      // Simulate audio output request (maps to microphone access for this demo)
-      requestMedia({ audio: true });
-    });
 
-    // Initialize permission states
     updatePermissions();
+    getAudioOutputDevices();
   </script>
 </body>
 </html>
